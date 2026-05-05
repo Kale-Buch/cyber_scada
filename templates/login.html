@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TTU · LOGIN</title>
+    <style>
+        /* ----- RESET & GLOBAL ----- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(145deg, #1d2f38, #0e1c24);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+
+        /* ----- LOGIN STYLES ----- */
+
+        .login-card {
+            max-width: 440px;
+            width: 100%;
+            background: #1e2c34;
+            border-radius: 2.5rem;
+            padding: 2.5rem 2.2rem;
+            border: 1px solid #38525e;
+            box-shadow: 0 25px 35px -12px #000000cc, inset 0 1px 2px #ffffff1a;
+        }
+
+        .login-logo {
+            width: 180px;
+            height: auto;
+            display: block;
+            margin: 0 auto 1.5rem;
+        }
+
+        .login-card h1 {
+            color: #d1e2ed;
+            font-weight: 500;
+            font-size: 2rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            text-align: center;
+            padding-bottom: 1.2rem;
+            border-bottom: 2px solid #3a5b69;
+            margin-bottom: 2rem;
+            text-shadow: 0 2px 5px #00000099;
+            line-height: 1.3;
+        }
+
+        .input-group {
+            margin-bottom: 2rem;
+        }
+
+        .input-group label {
+            display: block;
+            color: #bed7e6;
+            font-size: 0.95rem;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+
+        .input-group input {
+            width: 100%;
+            background: #0f202a;
+            border: 1px solid #2c5364;
+            border-radius: 3rem;
+            padding: 1rem 1.8rem;
+            font-size: 1.2rem;
+            color: #ecf7ff;
+            outline: none;
+            box-shadow: inset 0 4px 8px #000000b3, 0 2px 4px #00000066;
+            transition: 0.15s;
+        }
+
+        .input-group input:focus {
+            border-color: #479bb9;
+            box-shadow: inset 0 4px 8px #000000b3, 0 0 12px #2e8eb0;
+        }
+
+        .login-btn {
+            width: 100%;
+            background: #1f4859;
+            border: 1px solid #4295b3;
+            color: #f2fcff;
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            padding: 1rem 1.5rem;
+            border-radius: 4rem;
+            cursor: pointer;
+            box-shadow: 0 7px 0 #0b2c36, 0 10px 20px #00000080;
+            transition: 0.06s linear;
+        }
+
+        .login-btn:active {
+            transform: translateY(5px);
+            box-shadow: 0 2px 0 #0b2c36, 0 8px 16px #000000b3;
+        }
+
+        .error-message {
+            background: #3d2828;
+            border: 1px solid #c47a7a;
+            color: #ffc2c2;
+            text-align: center;
+            padding: 0.9rem 1rem;
+            border-radius: 3rem;
+            margin-top: 1.8rem;
+            font-weight: 500;
+            display: none;
+        }
+        .error-message.show {
+            display: block;
+        }
+
+        .login-hint {
+            margin-top: 2.2rem;
+            text-align: center;
+            color: #6d95a8;
+            border-top: 1px dashed #38606e;
+            padding-top: 1.5rem;
+        }
+        .login-hint span {
+            background: #1c3844;
+            padding: 0.5rem 1.8rem;
+            border-radius: 3rem;
+            display: inline-block;
+            font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- LOGIN PAGE -->
+    <div class="login-card">
+        <img src="TTU logo.png" alt="TTU Logo" class="login-logo">
+        <h1>⚡ ENTER CREDENTIAL TO CONNECT</h1>
+
+        <div class="input-group">
+            <label for="user">Username</label>
+            <input type="text" id="user">
+        </div>
+        <div class="input-group">
+            <label for="pass">Password</label>
+            <input type="password" id="pass">
+        </div>
+
+        <button class="login-btn" id="loginBtn">LOGIN</button>
+        <div id="loginErr" class="error-message">incorrect password and username combination</div>
+    </div>
+
+    <script>
+        (function() {
+            // ---------- LOGIN LOGIC ----------
+            const loginBtn = document.getElementById('loginBtn');
+            const userField = document.getElementById('user');
+            const passField = document.getElementById('pass');
+            const errorDiv = document.getElementById('loginErr');
+
+            function tryLogin() {
+                const userData = {
+                    username: userField.value.trim(),
+                    password: passField.value.trim()
+                };
+
+                fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(userData)
+                })
+                .then(response => {
+                    if (response.ok) {
+                        window.location.href = '/dashboard';
+                    } else {
+                        errorDiv.classList.add('show');
+                    }
+                })
+                .catch(err => console.error("Login Error:", err));
+            }
+
+            loginBtn.addEventListener('click', tryLogin);
+            [userField, passField].forEach(f => {
+                f.addEventListener('keypress', e => { if (e.key === 'Enter') { e.preventDefault(); tryLogin(); } });
+            });
+        })();
+    </script>
+</body>
+</html>

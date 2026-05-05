@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TTU · Control Dashboard</title>
+    <style>
+        /* ----- RESET & GLOBAL ----- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background: url('/static/Control_Dash_Background_image.jpg') center/cover no-repeat fixed;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+
+        /* ----- DASHBOARD STYLES ----- */
+        .dashboard {
+            max-width: 880px;
+            width: 100%;
+            background: #1e2c34;
+            border-radius: 2.5rem;
+            padding: 2rem 2.2rem 2.2rem;
+            border: 1px solid #3e555f;
+            box-shadow: 0 20px 35px -10px #000000e6, inset 0 1px 2px #ffffff1a;
+        }
+
+        .dashboard-logo {
+            width: 150px;
+            height: auto;
+            display: block;
+            margin-bottom: 1.5rem;
+        }
+
+        .dashboard-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .dashboard-header h2 {
+            color: #d1e2ed;
+            font-size: 1.9rem;
+            font-weight: 500;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            border-bottom: 2px solid #3d6473;
+            padding-bottom: 0.8rem;
+            flex: 1;
+        }
+
+        .action-group {
+            display: flex;
+            gap: 0.8rem;
+        }
+
+        .btn {
+            background: #263f4b;
+            border: 1px solid #4f7b8f;
+            color: #e5f0f7;
+            padding: 0.7rem 1.5rem;
+            border-radius: 3rem;
+            font-size: 1rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            cursor: pointer;
+            box-shadow: 0 4px 6px #00000066;
+            transition: 0.1s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .btn:hover {
+            background: #2f5262;
+            border-color: #70a9c2;
+        }
+        .btn:active {
+            transform: scale(0.97);
+        }
+
+        /* status card grid */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .status-card {
+            background: #172b34;
+            border-radius: 2rem;
+            padding: 1.2rem 1.8rem;
+            border: 1px solid #3c5a66;
+            box-shadow: inset 0 2px 4px #000000b3, 0 6px 10px #00000080;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            user-select: none;
+        }
+        .status-card:active { transform: scale(0.99); }
+
+        .status-label {
+            color: #c2dcec;
+            font-size: 1.4rem;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            text-shadow: 0 1px 2px black;
+            pointer-events: none;
+        }
+
+        .led {
+            font-weight: 600;
+            font-size: 1.3rem;
+            padding: 0.4rem 2rem;
+            border-radius: 3rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border: 1px solid;
+            min-width: 90px;
+            text-align: center;
+            pointer-events: auto;
+            transition: 0.1s;
+        }
+        .led.on {
+            background: #1e3a31;
+            color: #9ceeb3;
+            border-color: #34b86c;
+            box-shadow: 0 0 10px #2ecc7166, inset 0 1px 4px #cbffd9;
+        }
+        .led.off {
+            background: #352b2b;
+            color: #f7a6a6;
+            border-color: #c45a5a;
+            box-shadow: inset 0 1px 5px #2f0000;
+        }
+
+        /* power cards */
+        .power-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin: 1.2rem 0 1rem;
+        }
+
+        .power-card {
+            background: #10232c;
+            border-radius: 2.2rem;
+            padding: 1.5rem 1.8rem;
+            border: 1px solid #31515e;
+            box-shadow: inset 0 3px 6px #000000e6, 0 8px 14px #00000099;
+        }
+
+        .metric {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+        .metric:last-child { margin-bottom: 0; }
+
+        .metric-label {
+            color: #a2c4d9;
+            font-size: 1.2rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .metric-value {
+            background: #0b1d27;
+            color: #f0fcff;
+            font-size: 1.8rem;
+            font-weight: 500;
+            padding: 0.3rem 1.8rem;
+            border-radius: 3rem;
+            border: 1px solid #2e6881;
+            box-shadow: inset 0 2px 6px black;
+            min-width: 130px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <!-- DASHBOARD PAGE -->
+    <div class="dashboard">
+        <img src="/static/TTU logo.png" alt="TTU Logo" class="dashboard-logo">
+        <div class="dashboard-header">
+            <h2>SYSTEM CONTROL PANEL</h2>
+            <div class="action-group">
+                <!-- LOGOUT BUTTON -->
+                <button class="btn" id="logoutBtn">🚪 LOGOUT</button>
+            </div>
+        </div>
+
+        <!-- status cards (4) - toggle on click -->
+        <div class="grid-2">
+            <div class="status-card" data-comp="mppt">
+                <span class="status-label">MPPT LOAD</span>
+                <span class="led on" id="mpptLed">ON</span>
+            </div>
+            <div class="status-card" data-comp="energy">
+                <span class="status-label">ENERGY SOURCE</span>
+                <span class="led on" id="energyLed">ON</span>
+            </div>
+        </div>
+        <div class="grid-2">
+            <div class="status-card" data-comp="battery">
+                <span class="status-label">BATTERY</span>
+                <span class="led on" id="batteryLed">ON</span>
+            </div>
+            <div class="status-card" data-comp="inverter">
+                <span class="status-label">INVERTER LOAD</span>
+                <span class="led on" id="inverterLed">ON</span>
+            </div>
+        </div>
+
+        <!-- power meters -->
+        <div class="power-grid">
+            <div class="power-card">
+                <div class="metric">
+                    <span class="metric-label">DC LOAD POWER:</span>
+                    <span class="metric-value" id="power1">120 VA</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">SOURCE VOLTAGE:</span>
+                    <span class="metric-value" id="volt1">68.5 V</span>
+                </div>
+            </div>
+            <div class="power-card">
+                <div class="metric">
+                    <span class="metric-label">AC LOAD POWER:</span>
+                    <span class="metric-value" id="power2">350 VA</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">BATTERY VOLTAGE:</span>
+                    <span class="metric-value" id="volt2">44.3 V</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+
+            function logout_dash(){
+                window.location.replace('/logout');
+            }
+            logoutBtn.addEventListener("click", () => logout_dash());
+
+
+            const mpptLed = document.getElementById('mpptLed');
+            const energyLed = document.getElementById('energyLed');
+            const batteryLed = document.getElementById('batteryLed');
+            const inverterLed = document.getElementById('inverterLed');
+
+            const power1 = document.getElementById('power1');
+            const volt1 = document.getElementById('volt1');
+            const power2 = document.getElementById('power2');
+            const volt2 = document.getElementById('volt2');
+
+            function setLED(el, value){
+                el.className = "led " + (value ? "on" : "off");
+                el.innerText = value ? "ON" : "OFF";
+            }
+            
+            async function toggleNode(nodeName){
+                try{
+                    const res = await fetch("/toggle", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({ node: nodeName })
+                    });
+
+                    const data = await res.json();
+
+                    if(data.success){
+                        const map = {
+                            load_sw: mpptLed,
+                            source_sw: energyLed,
+                            batt_sw: batteryLed,
+                            inv_sw: inverterLed
+                        };
+
+                        setLED(map[nodeName], data.new_value);
+                    } else {
+                        console.log("Toggle error:", data.error);
+                        }
+
+                    } catch(err){
+                        console.log("Toggle request failed:", err);
+                    }
+            }
+            mpptLed.addEventListener("click", () => toggleNode("load_sw"));
+            energyLed.addEventListener("click", () => toggleNode("source_sw"));
+            batteryLed.addEventListener("click", () => toggleNode("batt_sw"));
+            inverterLed.addEventListener("click", () => toggleNode("inv_sw"));
+
+            async function updateDashboard(){
+
+                try{
+
+                    const res = await fetch("/data");
+                    const data = await res.json();
+
+                    // switches
+                    setLED(mpptLed, data.load_sw);
+                    setLED(energyLed, data.source_sw);
+                    setLED(batteryLed, data.batt_sw);
+                    setLED(inverterLed, data.inv_sw);
+
+                    // values
+                    power1.innerText = data.load_val + " VA";
+                    volt1.innerText = data.source_val + " V";
+
+                    power2.innerText = data.inv_val + " VA";
+                    volt2.innerText = data.batt_val + " V";
+
+                }
+                catch(err){
+                    console.log("Dashboard update error:", err);
+                }
+            }
+
+            // update every 500ms (same as OPC polling)
+            setInterval(updateDashboard,500);
+            updateDashboard();
+
+            })();
+    </script>
+</body>
+</html>
