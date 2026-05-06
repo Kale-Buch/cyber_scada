@@ -1,0 +1,4 @@
+flask
+opcua
+cryptography
+requests
