@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TTU · Attack Runner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        }
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0f1720;
+            color: #e2e8f0;
+            padding: 1.5rem;
+        }
+        .panel {
+            width: min(980px, 100%);
+            background: #14233a;
+            border: 1px solid #334155;
+            border-radius: 28px;
+            padding: 2rem;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.45);
+        }
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .panel-header h1 {
+            font-size: 2rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #cbd5e1;
+        }
+        .panel-header .controls {
+            display: flex;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+        }
+        .btn {
+            background: #1f3752;
+            border: 1px solid #475569;
+            color: #f8fafc;
+            padding: 0.85rem 1.4rem;
+            border-radius: 999px;
+            text-transform: uppercase;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.12s ease, background 0.12s ease;
+        }
+        .btn:hover { background: #2e4a72; transform: translateY(-1px); }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .card {
+            background: #0f1720;
+            border: 1px solid #334155;
+            border-radius: 24px;
+            padding: 1.5rem;
+            box-shadow: inset 0 1px 2px rgba(255,255,255,0.04);
+        }
+        .card h2 {
+            font-size: 1.1rem;
+            letter-spacing: 0.8px;
+            margin-bottom: 1rem;
+            color: #cbd5e1;
+        }
+        .field {
+            display: grid;
+            gap: 0.35rem;
+            margin-bottom: 1rem;
+        }
+        label {
+            font-size: 0.9rem;
+            color: #94a3b8;
+        }
+        input, select {
+            width: 100%;
+            background: #0f1720;
+            border: 1px solid #475569;
+            border-radius: 16px;
+            color: #e2e8f0;
+            padding: 0.9rem 1rem;
+            font-size: 0.98rem;
+        }
+        .attack-grid {
+            display: grid;
+            gap: 1rem;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            margin-bottom: 1.3rem;
+        }
+        .attack-card {
+            background: #162b44;
+            border: 1px solid #334155;
+            border-radius: 24px;
+            padding: 1.2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .attack-card p {
+            color: #cbd5e1;
+            line-height: 1.5;
+            font-size: 0.95rem;
+        }
+        .attack-card .attack-btn {
+            width: 100%;
+        }
+        .status-box {
+            background: #0b1523;
+            border: 1px solid #334155;
+            border-radius: 20px;
+            padding: 1rem 1.25rem;
+            color: #cbd5e1;
+            min-height: 96px;
+            display: flex;
+            align-items: center;
+        }
+        .status-box span {
+            color: #a5b4fc;
+        }
+        .note {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            margin-top: 0.25rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="panel">
+        <div class="panel-header">
+            <h1>Attack Runner</h1>
+            <div class="controls">
+                <button class="btn" id="backBtn">← Dashboard</button>
+                <button class="btn" id="logoutBtn">🚪 Logout</button>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <div class="card">
+                <h2>Target settings</h2>
+                <div class="field">
+                    <label for="serverType">Server type</label>
+                    <select id="serverType">
+                        <option value="prosys">prosys</option>
+                        <option value="softing">softing</option>
+                        <option value="unified">unified</option>
+                        <option value="kepware">kepware</option>
+                        <option value="dotnetstd">dotnetstd</option>
+                        <option value="open62541">open62541</option>
+                        <option value="ignition">ignition</option>
+                        <option value="opcua-python">opcua-python</option>
+                        <option value="node-opcua">node-opcua</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="targetIp">Target IP</label>
+                    <input id="targetIp" type="text" value="127.0.0.1" />
+                </div>
+                <div class="field">
+                    <label for="targetPort">Target port</label>
+                    <input id="targetPort" type="number" value="4840" />
+                </div>
+                <div class="field">
+                    <label for="endpoint">Endpoint</label>
+                    <input id="endpoint" type="text" value="/freeopcua/server/" />
+                </div>
+                <p class="note">Use the local login endpoint for brute force. The other attacks will target the configured OPC UA endpoint.</p>
+            </div>
+            <div class="card">
+                <h2>Status</h2>
+                <div class="status-box" id="statusBox">
+                    <span>No attack started yet.</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="attack-grid">
+            <div class="attack-card">
+                <h2>Brute-force</h2>
+                <p>Starts the existing brute force helper against the Flask login endpoint using the local wordlist.</p>
+                <button class="btn attack-btn" id="bruteForceBtn">Run Brute Force</button>
+            </div>
+            <div class="attack-card">
+                <h2>Thread pool starvation</h2>
+                <p>Runs the thread_pool_wait_starvation exploit from the OPC UA framework against the configured target.</p>
+                <button class="btn attack-btn" id="threadPoolBtn">Run Starvation</button>
+            </div>
+            <div class="attack-card">
+                <h2>Unlimited ConditionRefresh</h2>
+                <p>Runs the unlimited_condition_refresh attack against the configured target.</p>
+                <button class="btn attack-btn" id="conditionRefreshBtn">Run ConditionRefresh</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const logoutBtn = document.getElementById('logoutBtn');
+        const backBtn = document.getElementById('backBtn');
+        const bruteForceBtn = document.getElementById('bruteForceBtn');
+        const threadPoolBtn = document.getElementById('threadPoolBtn');
+        const conditionRefreshBtn = document.getElementById('conditionRefreshBtn');
+        const statusBox = document.getElementById('statusBox');
+        const serverTypeInput = document.getElementById('serverType');
+        const targetIpInput = document.getElementById('targetIp');
+        const targetPortInput = document.getElementById('targetPort');
+        const endpointInput = document.getElementById('endpoint');
+
+        function setStatus(text) {
+            statusBox.innerText = text;
+        }
+
+        logoutBtn.addEventListener('click', () => window.location.replace('/logout'));
+        backBtn.addEventListener('click', () => window.location.replace('/dashboard'));
+
+        async function startAttack(attackName) {
+            setStatus('Starting ' + attackName.replace(/_/g, ' ') + '...');
+            const payload = {
+                attack: attackName,
+                server_type: serverTypeInput.value,
+                ip_addr: targetIpInput.value,
+                port: targetPortInput.value,
+                endpoint: endpointInput.value
+            };
+            try {
+                const res = await fetch('/run-attack', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    setStatus(data.message);
+                } else {
+                    setStatus('Error: ' + (data.error || 'Unknown failure'));
+                }
+            } catch (err) {
+                setStatus('Request failed: ' + err.message);
+            }
+        }
+
+        bruteForceBtn.addEventListener('click', () => startAttack('brute_force'));
+        threadPoolBtn.addEventListener('click', () => startAttack('thread_pool_wait_starvation'));
+        conditionRefreshBtn.addEventListener('click', () => startAttack('unlimited_condition_refresh'));
+    </script>
+</body>
+</html>
