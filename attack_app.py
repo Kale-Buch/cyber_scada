@@ -137,6 +137,22 @@ def stop_attack():
     return jsonify({'success': False, 'message': 'No running attack found.'}), 404
 
 
+@app.route('/target-status')
+def target_status():
+    ip_addr = request.args.get('ip', '127.0.0.1')
+    port = request.args.get('port', '4840')
+    try:
+        port = int(port)
+    except ValueError:
+        return jsonify({'success': False, 'reachable': False, 'message': 'Invalid port'}), 400
+
+    try:
+        with socket.create_connection((ip_addr, port), timeout=2):
+            return jsonify({'success': True, 'reachable': True, 'message': 'Reachable'})
+    except Exception as e:
+        return jsonify({'success': False, 'reachable': False, 'message': str(e)})
+
+
 @app.route('/attack-status')
 def attack_status():
     state = attack_state.copy()
