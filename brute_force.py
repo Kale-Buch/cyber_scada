@@ -3,7 +3,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 
 URL = "http://127.0.0.1:5000/login"
-WORDLIST_PATH = "rockyou.txt"
+WORDLIST_PATH = "short_rock_you.txt"
 THREADS = 10  # Number of simultaneous requests
 FOUND = False
 
