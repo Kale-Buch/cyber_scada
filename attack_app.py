@@ -22,13 +22,16 @@ attack_state = {
 # Attack Helper Functions
 # ----------------------------
 
-def run_bruteforce_attack(ip_addr, port):
+def run_bruteforce_attack(ip_addr, port, path='/login'):
     try:
         import brute_force
         # reset state
         brute_force.FOUND = False
         brute_force.FOUND_PASSWORD = None
-        brute_force.URL = f"http://{ip_addr}:{port}/login"
+        # allow custom login path
+        if not path.startswith('/'):
+            path = '/' + path
+        brute_force.URL = f"http://{ip_addr}:{port}{path}"
 
         # Clear previous attempts
         with attack_lock:
@@ -116,7 +119,8 @@ def run_attack():
     if attack_name == 'brute_force':
         ip_addr = data.get('brute_force_ip', '127.0.0.1')
         port = int(data.get('brute_force_port', 5005) or 5005)
-        print(f"[attack_app] run_attack called: {attack_name} target={ip_addr}:{port}")
+        path = data.get('brute_force_path', '/login')
+        print(f"[attack_app] run_attack called: {attack_name} target={ip_addr}:{port} path={path}")
 
         attack_state.update({
             'status': 'running',
@@ -124,7 +128,7 @@ def run_attack():
             'message': 'Running brute force...',
             'found_password': None
         })
-        threading.Thread(target=run_bruteforce_attack, args=(ip_addr, port), daemon=True).start()
+        threading.Thread(target=run_bruteforce_attack, args=(ip_addr, port, path), daemon=True).start()
         message = 'Brute force attack started in background.'
     elif attack_name in ('thread_pool_wait_starvation', 'unlimited_condition_refresh'):
         server_type = data.get('server_type', 'prosys')
