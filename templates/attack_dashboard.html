@@ -150,7 +150,25 @@
 
         <div class="grid-2">
             <div class="card">
-                <h2>Target settings</h2>
+                <h2>Brute-force target</h2>
+                <div class="field">
+                    <label for="bruteForceTargetIp">Target IP</label>
+                    <input id="bruteForceTargetIp" type="text" value="127.0.0.1" />
+                </div>
+                <div class="field">
+                    <label for="bruteForceTargetPort">Target port</label>
+                    <input id="bruteForceTargetPort" type="number" value="5005" />
+                </div>
+                <div class="field">
+                    <span class="note">Brute-force status: <strong id="bruteForceTargetStatus">Checking...</strong></span>
+                </div>
+                <p class="note">Brute force hits <code>/login</code> on the configured host and port.</p>
+                <div style="margin-top:1rem">
+                    <button class="btn attack-btn" id="bruteForceBtn">Run Brute Force</button>
+                </div>
+            </div>
+            <div class="card">
+                <h2>OPC UA target</h2>
                 <div class="field">
                     <label for="serverType">Server type</label>
                     <select id="serverType">
@@ -178,35 +196,39 @@
                     <input id="endpoint" type="text" value="/freeopcua/server/" />
                 </div>
                 <div class="field">
-                    <span class="note">Target status: <strong id="targetStatus">Checking...</strong></span>
+                    <span class="note">OPC UA status: <strong id="opcuaTargetStatus">Checking...</strong></span>
                 </div>
-                <p class="note">Use the local login endpoint for brute force. The other attacks will target the configured OPC UA endpoint.</p>
+                <p class="note">Other attacks use the configured OPC UA endpoint and server type.</p>
+                <div style="display:flex;gap:0.6rem;margin-top:1rem;flex-wrap:wrap">
+                    <button class="btn attack-btn" id="threadPoolBtn">Run Starvation</button>
+                    <button class="btn attack-btn" id="conditionRefreshBtn">Run ConditionRefresh</button>
+                </div>
             </div>
+        </div>
+        <div class="grid-2">
             <div class="card">
                 <h2>Status</h2>
                 <div class="status-box" id="statusBox">
                     <span>No attack started yet.</span>
                 </div>
+                <div class="field">
+                    <span class="note">Brute-force result: <strong id="attackResult">None</strong></span>
+                </div>
+                <div class="field">
+                    <label>Recent brute-force attempts</label>
+                    <div id="attemptsPanel" style="background:#071122;border:1px solid #334155;border-radius:8px;padding:0.5rem;max-height:140px;overflow:auto;color:#cbd5e1;font-family:monospace;font-size:0.9rem">No attempts yet.</div>
+                </div>
+                <div class="field">
+                    <label>Exploit framework logs</label>
+                    <div id="logsPanel" style="background:#071122;border:1px solid #334155;border-radius:8px;padding:0.5rem;max-height:160px;overflow:auto;color:#cbd5e1;font-family:monospace;font-size:0.85rem">No logs yet.</div>
+                </div>
+                <div class="field">
+                    <span class="note">Only the brute-force attack reports a found password. The other attacks are DoS-style exploits.</span>
+                </div>
             </div>
         </div>
 
-        <div class="attack-grid">
-            <div class="attack-card">
-                <h2>Brute-force</h2>
-                <p>Starts the existing brute force helper against the Flask login endpoint using the local wordlist.</p>
-                <button class="btn attack-btn" id="bruteForceBtn">Run Brute Force</button>
-            </div>
-            <div class="attack-card">
-                <h2>Thread pool starvation</h2>
-                <p>Runs the thread_pool_wait_starvation exploit from the OPC UA framework against the configured target.</p>
-                <button class="btn attack-btn" id="threadPoolBtn">Run Starvation</button>
-            </div>
-            <div class="attack-card">
-                <h2>Unlimited ConditionRefresh</h2>
-                <p>Runs the unlimited_condition_refresh attack against the configured target.</p>
-                <button class="btn attack-btn" id="conditionRefreshBtn">Run ConditionRefresh</button>
-            </div>
-        </div>
+        
     </div>
 
     <script>
@@ -215,8 +237,12 @@
         const threadPoolBtn = document.getElementById('threadPoolBtn');
         const conditionRefreshBtn = document.getElementById('conditionRefreshBtn');
         const statusBox = document.getElementById('statusBox');
-        const targetStatusLabel = document.getElementById('targetStatus');
+        const attackResultLabel = document.getElementById('attackResult');
+        const bruteForceTargetStatusLabel = document.getElementById('bruteForceTargetStatus');
+        const opcuaTargetStatusLabel = document.getElementById('opcuaTargetStatus');
         const serverTypeInput = document.getElementById('serverType');
+        const bruteForceTargetIpInput = document.getElementById('bruteForceTargetIp');
+        const bruteForceTargetPortInput = document.getElementById('bruteForceTargetPort');
         const targetIpInput = document.getElementById('targetIp');
         const targetPortInput = document.getElementById('targetPort');
         const endpointInput = document.getElementById('endpoint');
@@ -225,39 +251,100 @@
             statusBox.innerText = text;
         }
 
-        async function updateTargetStatus() {
-            const ip = targetIpInput.value || '127.0.0.1';
-            const port = targetPortInput.value || 4840;
-            const endpoint = endpointInput.value || '/freeopcua/server/';
-            const serverType = serverTypeInput.value || 'prosys';
-            targetStatusLabel.innerText = 'Checking...';
-
+        async function checkTargetReachability(ip, port) {
             try {
-                const res = await fetch(`/target-status?ip=${encodeURIComponent(ip)}&port=${encodeURIComponent(port)}&endpoint=${encodeURIComponent(endpoint)}&server_type=${encodeURIComponent(serverType)}`);
+                const res = await fetch(`/target-status?ip=${encodeURIComponent(ip)}&port=${encodeURIComponent(port)}`);
                 const data = await res.json();
-                targetStatusLabel.innerText = data.reachable ? 'Reachable' : `Unreachable: ${data.message}`;
-                targetStatusLabel.style.color = data.reachable ? '#86efac' : '#fca5a5';
+                return data;
             } catch (err) {
-                targetStatusLabel.innerText = 'Error checking target';
-                targetStatusLabel.style.color = '#fca5a5';
+                return { reachable: false, message: err.message };
             }
         }
 
+        async function updateTargetStatus() {
+            const bfIp = bruteForceTargetIpInput.value || '127.0.0.1';
+            const bfPort = bruteForceTargetPortInput.value || 5005;
+            const opcuaIp = targetIpInput.value || '127.0.0.1';
+            const opcuaPort = targetPortInput.value || 4840;
+
+            bruteForceTargetStatusLabel.innerText = 'Checking...';
+            opcuaTargetStatusLabel.innerText = 'Checking...';
+
+            const bfStatus = await checkTargetReachability(bfIp, bfPort);
+            bruteForceTargetStatusLabel.innerText = bfStatus.reachable ? 'Reachable' : `Unreachable: ${bfStatus.message}`;
+            bruteForceTargetStatusLabel.style.color = bfStatus.reachable ? '#86efac' : '#fca5a5';
+
+            const opcuaStatus = await checkTargetReachability(opcuaIp, opcuaPort);
+            opcuaTargetStatusLabel.innerText = opcuaStatus.reachable ? 'Reachable' : `Unreachable: ${opcuaStatus.message}`;
+            opcuaTargetStatusLabel.style.color = opcuaStatus.reachable ? '#86efac' : '#fca5a5';
+        }
+
+        bruteForceTargetIpInput.addEventListener('change', updateTargetStatus);
+        bruteForceTargetPortInput.addEventListener('change', updateTargetStatus);
         targetIpInput.addEventListener('change', updateTargetStatus);
         targetPortInput.addEventListener('change', updateTargetStatus);
         endpointInput.addEventListener('change', updateTargetStatus);
         serverTypeInput.addEventListener('change', updateTargetStatus);
         updateTargetStatus();
 
+        async function updateAttackStatus() {
+            try {
+                const res = await fetch('/attack-status');
+                const data = await res.json();
+                setStatus(data.message || 'No attack status');
+                attackResultLabel.innerText = data.found_password || 'None';
+                if (data.found_password) {
+                    attackResultLabel.style.color = '#86efac';
+                } else {
+                    attackResultLabel.style.color = '#cbd5e1';
+                }
+                // render recent brute-force attempts
+                const attemptsPanel = document.getElementById('attemptsPanel');
+                if (data.attempts && data.attempts.length) {
+                    attemptsPanel.innerHTML = data.attempts.map(a => `<div>${a}</div>`).join('');
+                } else {
+                    attemptsPanel.innerText = 'No attempts yet.';
+                }
+
+                // render exploit framework logs
+                const logsPanel = document.getElementById('logsPanel');
+                if (data.logs && data.logs.length) {
+                    logsPanel.innerHTML = data.logs.map(l => `<div>${l}</div>`).join('');
+                    // scroll to bottom
+                    logsPanel.scrollTop = logsPanel.scrollHeight;
+                } else {
+                    logsPanel.innerText = 'No logs yet.';
+                }
+            } catch (err) {
+                console.warn('Attack status polling failed:', err);
+            }
+        }
+
+        setInterval(updateAttackStatus, 2000);
+        updateAttackStatus();
+
         async function startAttack(attackName) {
             setStatus('Starting ' + attackName.replace(/_/g, ' ') + '...');
-            const payload = {
-                attack: attackName,
-                server_type: serverTypeInput.value,
-                ip_addr: targetIpInput.value,
-                port: targetPortInput.value,
-                endpoint: endpointInput.value
+            let payload = {
+                attack: attackName
             };
+
+            if (attackName === 'brute_force') {
+                payload = {
+                    ...payload,
+                    brute_force_ip: bruteForceTargetIpInput.value,
+                    brute_force_port: bruteForceTargetPortInput.value
+                };
+            } else {
+                payload = {
+                    ...payload,
+                    server_type: serverTypeInput.value,
+                    opcua_ip: targetIpInput.value,
+                    opcua_port: targetPortInput.value,
+                    endpoint: endpointInput.value
+                };
+            }
+
             try {
                 const res = await fetch('/run-attack', {
                     method: 'POST',
