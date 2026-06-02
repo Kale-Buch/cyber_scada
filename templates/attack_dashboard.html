@@ -160,6 +160,10 @@
                     <input id="bruteForceTargetPort" type="number" value="5005" />
                 </div>
                 <div class="field">
+                    <label for="bruteForceTargetPath">Login path</label>
+                    <input id="bruteForceTargetPath" type="text" value="/login" />
+                </div>
+                <div class="field">
                     <span class="note">Brute-force status: <strong id="bruteForceTargetStatus">Checking...</strong></span>
                 </div>
                 <p class="note">Brute force hits <code>/login</code> on the configured host and port.</p>
@@ -281,6 +285,8 @@
 
         bruteForceTargetIpInput.addEventListener('change', updateTargetStatus);
         bruteForceTargetPortInput.addEventListener('change', updateTargetStatus);
+        const bruteForceTargetPathInput = document.getElementById('bruteForceTargetPath');
+        bruteForceTargetPathInput.addEventListener('change', updateTargetStatus);
         targetIpInput.addEventListener('change', updateTargetStatus);
         targetPortInput.addEventListener('change', updateTargetStatus);
         endpointInput.addEventListener('change', updateTargetStatus);
@@ -333,7 +339,8 @@
                 payload = {
                     ...payload,
                     brute_force_ip: bruteForceTargetIpInput.value,
-                    brute_force_port: bruteForceTargetPortInput.value
+                    brute_force_port: bruteForceTargetPortInput.value,
+                    brute_force_path: document.getElementById('bruteForceTargetPath').value || '/login'
                 };
             } else {
                 payload = {
