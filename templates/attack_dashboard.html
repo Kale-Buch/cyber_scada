@@ -180,12 +180,18 @@
                 <div class="field">
                     <span class="note">Target status: <strong id="targetStatus">Checking...</strong></span>
                 </div>
-                <p class="note">Use the local login endpoint for brute force. The other attacks will target the configured OPC UA endpoint.</p>
+                <p class="note">Brute force uses the configured host and port on <code>/login</code>. Other attacks use the configured OPC UA endpoint.</p>
             </div>
             <div class="card">
                 <h2>Status</h2>
                 <div class="status-box" id="statusBox">
                     <span>No attack started yet.</span>
+                </div>
+                <div class="field">
+                    <span class="note">Brute-force result: <strong id="attackResult">None</strong></span>
+                </div>
+                <div class="field">
+                    <span class="note">Only the brute-force attack reports a found password. The other attacks are DoS-style exploits.</span>
                 </div>
             </div>
         </div>
@@ -215,6 +221,7 @@
         const threadPoolBtn = document.getElementById('threadPoolBtn');
         const conditionRefreshBtn = document.getElementById('conditionRefreshBtn');
         const statusBox = document.getElementById('statusBox');
+        const attackResultLabel = document.getElementById('attackResult');
         const targetStatusLabel = document.getElementById('targetStatus');
         const serverTypeInput = document.getElementById('serverType');
         const targetIpInput = document.getElementById('targetIp');
@@ -248,6 +255,25 @@
         endpointInput.addEventListener('change', updateTargetStatus);
         serverTypeInput.addEventListener('change', updateTargetStatus);
         updateTargetStatus();
+
+        async function updateAttackStatus() {
+            try {
+                const res = await fetch('/attack-status');
+                const data = await res.json();
+                setStatus(data.message || 'No attack status');
+                attackResultLabel.innerText = data.found_password || 'None';
+                if (data.found_password) {
+                    attackResultLabel.style.color = '#86efac';
+                } else {
+                    attackResultLabel.style.color = '#cbd5e1';
+                }
+            } catch (err) {
+                console.warn('Attack status polling failed:', err);
+            }
+        }
+
+        setInterval(updateAttackStatus, 2000);
+        updateAttackStatus();
 
         async function startAttack(attackName) {
             setStatus('Starting ' + attackName.replace(/_/g, ' ') + '...');

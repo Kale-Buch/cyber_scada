@@ -9,18 +9,35 @@ app = Flask(__name__)
 
 attack_lock = threading.Lock()
 attack_processes = []
+attack_state = {
+    'status': 'idle',
+    'current_attack': None,
+    'message': 'No attack started.',
+    'found_password': None
+}
 
 # ----------------------------
 # Attack Helper Functions
 # ----------------------------
 
-def run_bruteforce_attack():
+def run_bruteforce_attack(ip_addr, port):
     try:
         import brute_force
         brute_force.FOUND = False
+        brute_force.FOUND_PASSWORD = None
+        brute_force.URL = f"http://{ip_addr}:{port}/login"
         brute_force.run_test()
+        if hasattr(brute_force, 'FOUND_PASSWORD') and brute_force.FOUND_PASSWORD:
+            attack_state['found_password'] = brute_force.FOUND_PASSWORD
+            attack_state['message'] = f"Password found: {brute_force.FOUND_PASSWORD}"
+        else:
+            attack_state['message'] = 'Brute force finished without finding a password.'
     except Exception as e:
+        attack_state['message'] = f'Brute force attack failed: {e}'
         print("[!] Brute force attack failed:", e)
+    finally:
+        attack_state['status'] = 'done'
+        attack_state['current_attack'] = None
 
 
 def run_exploit_framework_attack(attack_name, server_type, ip_addr, port, endpoint):
@@ -54,9 +71,21 @@ def run_attack():
     print(f"[attack_app] run_attack called: {attack_name} target={ip_addr}:{port} endpoint={endpoint}")
 
     if attack_name == 'brute_force':
-        threading.Thread(target=run_bruteforce_attack, daemon=True).start()
+        attack_state.update({
+            'status': 'running',
+            'current_attack': 'brute_force',
+            'message': 'Running brute force...',
+            'found_password': None
+        })
+        threading.Thread(target=run_bruteforce_attack, args=(ip_addr, port), daemon=True).start()
         message = 'Brute force attack started in background.'
     elif attack_name in ('thread_pool_wait_starvation', 'unlimited_condition_refresh'):
+        attack_state.update({
+            'status': 'running',
+            'current_attack': attack_name,
+            'message': f'{attack_name.replace("_", " ").title()} attack started.',
+            'found_password': None
+        })
         threading.Thread(target=run_exploit_framework_attack, args=(attack_name, server_type, ip_addr, port, endpoint), daemon=True).start()
         message = f'{attack_name.replace("_", " ").title()} attack started in background.'
     else:
@@ -99,8 +128,19 @@ def stop_attacks():
 def stop_attack():
     print('[attack_app] stop_attack called')
     if stop_attacks():
+        attack_state.update({
+            'status': 'stopped',
+            'message': 'Attack interrupted.',
+            'current_attack': None
+        })
         return jsonify({'success': True, 'message': 'Attack interrupt requested.'})
     return jsonify({'success': False, 'message': 'No running attack found.'}), 404
+
+
+@app.route('/attack-status')
+def attack_status():
+    state = attack_state.copy()
+    return jsonify(state)
 
 
 @app.route('/')

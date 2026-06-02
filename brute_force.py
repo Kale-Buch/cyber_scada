@@ -6,6 +6,7 @@ URL = "http://127.0.0.1:5000/login"
 WORDLIST_PATH = "rockyou.txt"
 THREADS = 10  # Number of simultaneous requests
 FOUND = False
+FOUND_PASSWORD = None
 
 # Use a session for connection pooling
 session = requests.Session()
