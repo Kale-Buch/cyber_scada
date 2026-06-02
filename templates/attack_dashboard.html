@@ -143,6 +143,9 @@
     <div class="panel">
         <div class="panel-header">
             <h1>Attack Runner</h1>
+            <div class="controls">
+                <button class="btn" id="stopAttackBtn">⏹ Stop Attack</button>
+            </div>
         </div>
 
         <div class="grid-2">
@@ -204,8 +207,7 @@
     </div>
 
     <script>
-        const logoutBtn = document.getElementById('logoutBtn');
-        const backBtn = document.getElementById('backBtn');
+        const stopAttackBtn = document.getElementById('stopAttackBtn');
         const bruteForceBtn = document.getElementById('bruteForceBtn');
         const threadPoolBtn = document.getElementById('threadPoolBtn');
         const conditionRefreshBtn = document.getElementById('conditionRefreshBtn');
@@ -218,9 +220,6 @@
         function setStatus(text) {
             statusBox.innerText = text;
         }
-
-        logoutBtn.addEventListener('click', () => window.location.replace('/logout'));
-        backBtn.addEventListener('click', () => window.location.replace('/dashboard'));
 
         async function startAttack(attackName) {
             setStatus('Starting ' + attackName.replace(/_/g, ' ') + '...');
@@ -251,6 +250,16 @@
         bruteForceBtn.addEventListener('click', () => startAttack('brute_force'));
         threadPoolBtn.addEventListener('click', () => startAttack('thread_pool_wait_starvation'));
         conditionRefreshBtn.addEventListener('click', () => startAttack('unlimited_condition_refresh'));
+        stopAttackBtn.addEventListener('click', async () => {
+            setStatus('Stopping running attack...');
+            try {
+                const res = await fetch('/stop-attack', { method: 'POST' });
+                const data = await res.json();
+                setStatus(data.message || 'Stop request sent.');
+            } catch (err) {
+                setStatus('Stop request failed: ' + err.message);
+            }
+        });
     </script>
 </body>
 </html>
