@@ -177,6 +177,9 @@
                     <label for="endpoint">Endpoint</label>
                     <input id="endpoint" type="text" value="/freeopcua/server/" />
                 </div>
+                <div class="field">
+                    <span class="note">Target status: <strong id="targetStatus">Checking...</strong></span>
+                </div>
                 <p class="note">Use the local login endpoint for brute force. The other attacks will target the configured OPC UA endpoint.</p>
             </div>
             <div class="card">
@@ -212,6 +215,7 @@
         const threadPoolBtn = document.getElementById('threadPoolBtn');
         const conditionRefreshBtn = document.getElementById('conditionRefreshBtn');
         const statusBox = document.getElementById('statusBox');
+        const targetStatusLabel = document.getElementById('targetStatus');
         const serverTypeInput = document.getElementById('serverType');
         const targetIpInput = document.getElementById('targetIp');
         const targetPortInput = document.getElementById('targetPort');
@@ -220,6 +224,30 @@
         function setStatus(text) {
             statusBox.innerText = text;
         }
+
+        async function updateTargetStatus() {
+            const ip = targetIpInput.value || '127.0.0.1';
+            const port = targetPortInput.value || 4840;
+            const endpoint = endpointInput.value || '/freeopcua/server/';
+            const serverType = serverTypeInput.value || 'prosys';
+            targetStatusLabel.innerText = 'Checking...';
+
+            try {
+                const res = await fetch(`/target-status?ip=${encodeURIComponent(ip)}&port=${encodeURIComponent(port)}&endpoint=${encodeURIComponent(endpoint)}&server_type=${encodeURIComponent(serverType)}`);
+                const data = await res.json();
+                targetStatusLabel.innerText = data.reachable ? 'Reachable' : `Unreachable: ${data.message}`;
+                targetStatusLabel.style.color = data.reachable ? '#86efac' : '#fca5a5';
+            } catch (err) {
+                targetStatusLabel.innerText = 'Error checking target';
+                targetStatusLabel.style.color = '#fca5a5';
+            }
+        }
+
+        targetIpInput.addEventListener('change', updateTargetStatus);
+        targetPortInput.addEventListener('change', updateTargetStatus);
+        endpointInput.addEventListener('change', updateTargetStatus);
+        serverTypeInput.addEventListener('change', updateTargetStatus);
+        updateTargetStatus();
 
         async function startAttack(attackName) {
             setStatus('Starting ' + attackName.replace(/_/g, ' ') + '...');
