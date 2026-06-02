@@ -5,13 +5,8 @@ import time
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
-<<<<<<< HEAD
 URL = "http://127.0.0.1:5000/login"
 WORDLIST_PATH = "short_rock_you.txt"
-=======
-URL = os.getenv("BRUTE_FORCE_URL", "http://127.0.0.1:5000/login")
-WORDLIST_PATH = "rockyou.txt"
->>>>>>> fab5949f9c7586a380ead83091586850de9dee9f
 THREADS = 10  # Number of simultaneous requests
 FOUND = False
 FOUND_PASSWORD = None
