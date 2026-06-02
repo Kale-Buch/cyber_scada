@@ -38,21 +38,8 @@ def run_exploit_framework_attack(attack_name, server_type, ip_addr, port, endpoi
 # Routes
 # ----------------------------
 
-@app.route('/attacks')
-def attacks():
-    """Render attack dashboard if user is authenticated"""
-    if not session.get('logged_in'):
-        # Redirect back to main app login if not authenticated
-        return redirect('http://127.0.0.1:5000/')
-    return render_template('attack_dashboard.html')
-
-
 @app.route('/run-attack', methods=['POST'])
 def run_attack():
-    """Execute an attack if user is authenticated"""
-    if not session.get('logged_in'):
-        return jsonify({'success': False, 'error': 'Not logged in'}), 401
-
     data = request.json or {}
     attack_name = data.get('attack')
     server_type = data.get('server_type', 'prosys')
@@ -70,6 +57,10 @@ def run_attack():
         return jsonify({'success': False, 'error': 'Unknown attack'}), 400
 
     return jsonify({'success': True, 'message': message})
+
+@app.route("/")
+def home():
+    return render_template("attack_dashboard.html")
 
 
 if __name__ == '__main__':
