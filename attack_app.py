@@ -18,6 +18,14 @@ attack_state = {
     'logs': []       # recent lines from exploit framework
 }
 
+
+def is_target_reachable(ip_addr, port, timeout=2):
+    try:
+        with socket.create_connection((ip_addr, port), timeout=timeout):
+            return True
+    except Exception:
+        return False
+
 # ----------------------------
 # Attack Helper Functions
 # ----------------------------
@@ -122,6 +130,11 @@ def run_attack():
         path = data.get('brute_force_path', '/login')
         print(f"[attack_app] run_attack called: {attack_name} target={ip_addr}:{port} path={path}")
 
+        if not is_target_reachable(ip_addr, port):
+            error_msg = f"Target {ip_addr}:{port} is not reachable from the attack host."
+            print(f"[attack_app] {error_msg}")
+            return jsonify({'success': False, 'error': error_msg}), 400
+
         attack_state.update({
             'status': 'running',
             'current_attack': 'brute_force',
@@ -223,7 +236,7 @@ def home():
 
 if __name__ == '__main__':
     try:
-        app.run(debug=True, port=5001, use_reloader=False)
+        app.run(host='0.0.0.0', debug=True, port=5001, use_reloader=False)
     except KeyboardInterrupt:
         print('\n[attack_app] Keyboard interrupt received, shutting down...')
         sys.exit(0)
