@@ -64,14 +64,12 @@ def run_test(target_url=None):
 
     try:
         with open(WORDLIST_PATH, 'r', encoding='latin-1') as file:
-            # Using a ThreadPoolExecutor to manage our worker threads
-            with ThreadPoolExecutor(max_workers=THREADS) as executor:
-                for line in file:
-                    if FOUND:
-                        break
-                    
-                    password = line.strip()
-                    executor.submit(attempt_password, password)
+            for line in file:
+                if FOUND:
+                    break
+
+                password = line.strip()
+                attempt_password(password)
 
     except FileNotFoundError:
         print("[-] Wordlist not found.")
