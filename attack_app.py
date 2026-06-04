@@ -257,7 +257,8 @@ def home():
 
 if __name__ == '__main__':
     try:
-        app.run(debug=True, port=5001, use_reloader=False)
+        print('[attack_app] Starting Flask on 0.0.0.0:5001 (accessible from other machines on the network)')
+        app.run(host='0.0.0.0', debug=True, port=5001, use_reloader=False)
     except KeyboardInterrupt:
         print('\n[attack_app] Keyboard interrupt received, shutting down...')
         sys.exit(0)
