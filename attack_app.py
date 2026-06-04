@@ -10,6 +10,7 @@ app = Flask(__name__)
 
 attack_lock = threading.Lock()
 attack_processes = []
+ATTEMPT_HISTORY = 200
 attack_state = {
     'status': 'idle',
     'current_attack': None,
@@ -90,8 +91,8 @@ def run_bruteforce_attack(ip_addr, port, path='/login'):
                     # record attempt (keep last 50)
                     with attack_lock:
                         attack_state['attempts'].append(pw)
-                        if len(attack_state['attempts']) > 50:
-                            attack_state['attempts'] = attack_state['attempts'][-50:]
+                        if len(attack_state['attempts']) > ATTEMPT_HISTORY:
+                            attack_state['attempts'] = attack_state['attempts'][-ATTEMPT_HISTORY:]
                         attack_state['message'] = f"Trying: {pw}"
                     brute_force.attempt_password(pw)
                     if brute_force.FOUND:
