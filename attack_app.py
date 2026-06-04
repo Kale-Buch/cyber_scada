@@ -27,6 +27,31 @@ def resolve_target_ip(ip_addr):
     return ip_addr
 
 
+def get_local_ips():
+    ip_set = set(['127.0.0.1'])
+    try:
+        hostname = socket.gethostname()
+        for ip in socket.gethostbyname_ex(hostname)[2]:
+            ip_set.add(ip)
+    except Exception:
+        pass
+
+    # Use a UDP socket to infer the primary outbound IP
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(('8.8.8.8', 80))
+        ip_set.add(s.getsockname()[0])
+    except Exception:
+        pass
+    finally:
+        try:
+            s.close()
+        except Exception:
+            pass
+
+    return sorted(ip_set)
+
+
 def check_target_reachable(ip_addr, port, timeout=2):
     try:
         with socket.create_connection((ip_addr, port), timeout=timeout):
@@ -257,6 +282,8 @@ def home():
 
 if __name__ == '__main__':
     try:
+        available_ips = get_local_ips()
+        print(f"[attack_app] Available local IPs: {', '.join(available_ips)}")
         print('[attack_app] Starting Flask on 0.0.0.0:5001 (accessible from other machines on the network)')
         app.run(host='0.0.0.0', debug=True, port=5001, use_reloader=False)
     except KeyboardInterrupt:
