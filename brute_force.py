@@ -16,6 +16,13 @@ session = requests.Session()
 lock = threading.Lock()
 
 def is_success_response(response):
+    try:
+        data = response.json()
+        if isinstance(data, dict) and 'success' in data:
+            return bool(data['success'])
+    except ValueError:
+        pass
+
     if response.history:
         return True
     if response.status_code in (301, 302, 303, 307, 308):
@@ -24,8 +31,6 @@ def is_success_response(response):
         return True
     body = response.text.lower()
     if any(word in body for word in ('invalid', 'incorrect', 'failed', 'error', 'try again', 'login failed')):
-        return False
-    if any(word in body for word in ('login', 'sign in', 'password')):
         return False
     return True
 
