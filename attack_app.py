@@ -4,6 +4,7 @@ import socket
 import subprocess
 import sys
 import threading
+import traceback
 
 app = Flask(__name__)
 
@@ -289,4 +290,12 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         print('\n[attack_app] Keyboard interrupt received, shutting down...')
         sys.exit(0)
+    except Exception as e:
+        print('[attack_app] Startup failed with exception:')
+        traceback.print_exc()
+        try:
+            input('Press Enter to exit...')
+        except Exception:
+            pass
+        sys.exit(1)
 
