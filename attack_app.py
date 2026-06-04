@@ -234,7 +234,7 @@ def home():
 
 if __name__ == '__main__':
     try:
-        app.run(host='0.0.0.0', debug=True, port=5001, use_reloader=False)
+        app.run(debug=True, port=5001, use_reloader=False)
     except KeyboardInterrupt:
         print('\n[attack_app] Keyboard interrupt received, shutting down...')
         sys.exit(0)
