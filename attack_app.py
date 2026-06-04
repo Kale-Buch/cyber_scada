@@ -19,12 +19,12 @@ attack_state = {
 }
 
 
-def is_target_reachable(ip_addr, port, timeout=2):
-    try:
-        with socket.create_connection((ip_addr, port), timeout=timeout):
-            return True
-    except Exception:
-        return False
+def resolve_target_ip(ip_addr):
+    if ip_addr in ('127.0.0.1', 'localhost', '0.0.0.0'):
+        client_ip = request.remote_addr
+        if client_ip and client_ip not in ('127.0.0.1', '::1'):
+            return client_ip
+    return ip_addr
 
 # ----------------------------
 # Attack Helper Functions
@@ -128,12 +128,9 @@ def run_attack():
         ip_addr = data.get('brute_force_ip', '127.0.0.1')
         port = int(data.get('brute_force_port', 5005) or 5005)
         path = data.get('brute_force_path', '/login')
-        print(f"[attack_app] run_attack called: {attack_name} target={ip_addr}:{port} path={path}")
-
-        if not is_target_reachable(ip_addr, port):
-            error_msg = f"Target {ip_addr}:{port} is not reachable from the attack host."
-            print(f"[attack_app] {error_msg}")
-            return jsonify({'success': False, 'error': error_msg}), 400
+        original_ip = ip_addr
+        ip_addr = resolve_target_ip(ip_addr)
+        print(f"[attack_app] run_attack called: {attack_name} target={original_ip}:{port} path={path} resolved={ip_addr}")
 
         attack_state.update({
             'status': 'running',
@@ -211,6 +208,7 @@ def stop_attack():
 def target_status():
     ip_addr = request.args.get('ip', '127.0.0.1')
     port = request.args.get('port', '4840')
+    ip_addr = resolve_target_ip(ip_addr)
     try:
         port = int(port)
     except ValueError:
@@ -236,7 +234,7 @@ def home():
 
 if __name__ == '__main__':
     try:
-        app.run(host='0.0.0.0', debug=True, port=5001, use_reloader=False)
+        app.run(debug=True, port=5001, use_reloader=False)
     except KeyboardInterrupt:
         print('\n[attack_app] Keyboard interrupt received, shutting down...')
         sys.exit(0)
