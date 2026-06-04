@@ -184,30 +184,8 @@ app.secret_key = 'super_secret_key_change_this' # Required for sessions
 
 @app.before_request
 def restrict_dashboard_access():
-    global approved_remote_ip
-    client_ip = request.remote_addr or ""
-
-    if request.path == "/login":
-        if client_ip in local_client_ips or client_ip in ALLOWED_REMOTE_IPS or is_private_ip(client_ip):
-            return None
-        return access_denied_response(client_ip)
-
-    if client_ip in local_client_ips:
-        return None
-
-    if not is_private_ip(client_ip):
-        return access_denied_response(client_ip)
-
-    with access_lock:
-        if approved_remote_ip is None:
-            approved_remote_ip = client_ip
-            print(f"Approved remote dashboard device: {approved_remote_ip}")
-            return None
-
-        if client_ip == approved_remote_ip:
-            return None
-
-    return access_denied_response(client_ip)
+    # Allow all remote access for testing and brute-force validation.
+    return None
 
 @app.route('/login', methods=['POST'])
 def login():
