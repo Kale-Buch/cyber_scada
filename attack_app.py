@@ -22,10 +22,7 @@ attack_state = {
 
 
 def resolve_target_ip(ip_addr):
-    if ip_addr in ('127.0.0.1', 'localhost', '0.0.0.0'):
-        client_ip = request.remote_addr
-        if client_ip and client_ip not in ('127.0.0.1', '::1'):
-            return client_ip
+    # Don't auto-resolve — let the user specify the exact target IP
     return ip_addr
 
 
