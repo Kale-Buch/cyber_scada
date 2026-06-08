@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Device Manager</title>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+        }
+
+        button {
+            padding: 5px 10px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Connected Devices</h1>
+
+<table>
+    <tr>
+        <th>IP Address</th>
+        <th>Status</th>
+        <th>Action</th>
+    </tr>
+
+    {% for device_id, device in devices.items() %}
+    <tr>
+        <td>{{ device.ip }}</td>
+
+        <td>
+            {% if device.connected %}
+                Connected
+            {% else %}
+                Disconnected
+            {% endif %}
+        </td>
+
+        <td>
+            {% if device.connected %}
+            <button onclick="disconnectDevice('{{ device_id }}')">
+                Disconnect
+            </button>
+            {% else %}
+            <button onclick="connectDevice('{{ device_id }}')">
+                Connect
+            </button>
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+<script>
+async function disconnectDevice(id) {
+    await fetch(`/admin/disconnect/${id}`, {
+        method: 'POST'
+    });
+
+    location.reload();
+}
+
+async function connectDevice(id) {
+    await fetch(`/admin/connect/${id}`, {
+        method: 'POST'
+    });
+
+    location.reload();
+}
+</script>
+
+</body>
+</html>

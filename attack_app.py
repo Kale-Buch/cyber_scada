@@ -1,12 +1,16 @@
-from flask import Flask, jsonify, request, render_template
+from flask import Flask, jsonify, request, render_template, abort
 import os
 import socket
 import subprocess
 import sys
 import threading
 import traceback
+from functools import wraps
 
 app = Flask(__name__)
+
+connected_devices = {}
+devices_lock = threading.Lock()
 
 attack_lock = threading.Lock()
 attack_processes = []
@@ -20,6 +24,75 @@ attack_state = {
     'logs': []       # recent lines from exploit framework
 }
 
+
+
+def localhost_only(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if request.remote_addr not in ('127.0.0.1', '::1'):
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated
+
+@app.route('/admin')
+@localhost_only
+def admin_dashboard():
+    with devices_lock:
+        devices = dict(connected_devices)
+
+    return render_template(
+        'admin_dashboard.html',
+        devices=devices
+    )
+
+@app.route('/admin/connect/<device_id>', methods=['POST'])
+@localhost_only
+def connect_device(device_id):
+    with devices_lock:
+        if device_id in connected_devices:
+            connected_devices[device_id]['connected'] = True
+
+    return jsonify({"success": True})
+
+@app.route('/admin/disconnect/<device_id>', methods=['POST'])
+@localhost_only
+def disconnect_device(device_id):
+    with devices_lock:
+        if device_id in connected_devices:
+            connected_devices[device_id]['connected'] = False
+
+    return jsonify({"success": True})
+
+def register_client():
+    ip = request.remote_addr
+
+    with devices_lock:
+        if ip not in connected_devices:
+            connected_devices[ip] = {
+                "ip": ip,
+                "connected": True
+            }
+
+def is_allowed_client():
+    ip = request.remote_addr
+
+    with devices_lock:
+        if ip in connected_devices:
+            return connected_devices[ip]['connected']
+
+    return True
+
+@app.before_request
+def block_disconnected_clients():
+    if request.path.startswith('/admin'):
+        return
+
+    ip = request.remote_addr
+
+    with devices_lock:
+        if ip in connected_devices:
+            if not connected_devices[ip]['connected']:
+                return "Disconnected by administrator", 403
 
 def resolve_target_ip(ip_addr):
     # Don't auto-resolve — let the user specify the exact target IP
@@ -276,6 +349,7 @@ def attack_status():
 
 @app.route('/')
 def home():
+    register_client()
     return render_template('attack_dashboard.html')
 
 
