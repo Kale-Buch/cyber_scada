@@ -18,6 +18,88 @@
         }
     </style>
 </head>
+<script>
+
+async function loadDevices() {
+
+    const response = await fetch('/admin/devices');
+    const devices = await response.json();
+
+    const table = document.getElementById('deviceTable');
+
+    table.innerHTML = '';
+
+    devices.forEach(device => {
+
+        const row = document.createElement('tr');
+
+        row.innerHTML = `
+            <td>${device.ip}</td>
+
+            <td>
+                <div>
+                    Connection:
+                    ${
+                        device.connected
+                        ? '<span style="color:lime">Connected</span>'
+                        : '<span style="color:red">Disconnected</span>'
+                    }
+                </div>
+
+                <div>
+                    Access:
+                    ${
+                        device.soft_blocked
+                        ? '<span style="color:orange">Soft Blocked</span>'
+                        : '<span style="color:green">Not Blocked</span>'
+                    }
+                </div>
+            </td>
+
+            <td>
+                ${
+                    device.connected
+                    ? `<button onclick="disconnectDevice('${device.ip}')">Disconnect</button>`
+                    : `<button onclick="connectDevice('${device.ip}')">Connect</button>`
+                }
+            </td>
+
+            <td>
+                ${
+                    device.soft_blocked
+                    ? `<button onclick="unsoftBlock('${device.ip}')">Unsoft Block</button>`
+                    : `<button onclick="softBlock('${device.ip}')">Soft Block</button>`
+                }
+            </td>
+        `;
+
+        table.appendChild(row);
+    });
+}
+
+async function disconnectDevice(ip) {
+
+    await fetch(`/admin/disconnect/${ip}`, {
+        method: 'POST'
+    });
+
+    loadDevices();
+}
+
+async function connectDevice(ip) {
+
+    await fetch(`/admin/connect/${ip}`, {
+        method: 'POST'
+    });
+
+    loadDevices();
+}
+
+loadDevices();
+
+setInterval(loadDevices, 2000);
+
+</script>
 <body>
 
 <h1>Connected Devices</h1>
@@ -26,34 +108,11 @@
     <tr>
         <th>IP Address</th>
         <th>Status</th>
-        <th>Action</th>
+        <th>Connection</th>
+        <th>Block</th> 
     </tr>
-
-    {% for device_id, device in devices.items() %}
-    <tr>
-        <td>{{ device.ip }}</td>
-
-        <td>
-            {% if device.connected %}
-                Connected
-            {% else %}
-                Disconnected
-            {% endif %}
-        </td>
-
-        <td>
-            {% if device.connected %}
-            <button onclick="disconnectDevice('{{ device_id }}')">
-                Disconnect
-            </button>
-            {% else %}
-            <button onclick="connectDevice('{{ device_id }}')">
-                Connect
-            </button>
-            {% endif %}
-        </td>
-    </tr>
-    {% endfor %}
+    <tbody id="deviceTable">
+    </tbody>
 </table>
 
 <script>
@@ -71,6 +130,24 @@ async function connectDevice(id) {
     });
 
     location.reload();
+}
+
+async function softBlock(ip) {
+
+    await fetch(`/admin/soft-block/${ip}`, {
+        method: 'POST'
+    });
+
+    loadDevices();
+}
+
+async function unsoftBlock(ip) {
+
+    await fetch(`/admin/unsoft-block/${ip}`, {
+        method: 'POST'
+    });
+
+    loadDevices();
 }
 </script>
 

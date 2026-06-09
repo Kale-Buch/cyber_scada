@@ -37,31 +37,73 @@ def localhost_only(f):
 @app.route('/admin')
 @localhost_only
 def admin_dashboard():
-    with devices_lock:
-        devices = dict(connected_devices)
+    return render_template('admin_dashboard.html')
 
-    return render_template(
-        'admin_dashboard.html',
-        devices=devices
-    )
-
-@app.route('/admin/connect/<device_id>', methods=['POST'])
+@app.route('/admin/devices')
 @localhost_only
-def connect_device(device_id):
+def get_devices():
+
     with devices_lock:
-        if device_id in connected_devices:
-            connected_devices[device_id]['connected'] = True
+        devices = []
+
+        for ip, device in connected_devices.items():
+            devices.append({
+                "ip": device.get("ip", ip),
+                "connected": device.get("connected", False),
+                "soft_blocked": device.get("soft_blocked", False)
+            })
+
+    return jsonify(devices)
+
+@app.route('/admin/connect/<path:ip>', methods=['POST'])
+@localhost_only
+def connect_device(ip):
+
+    with devices_lock:
+        if ip in connected_devices:
+            connected_devices[ip]['connected'] = True
 
     return jsonify({"success": True})
 
-@app.route('/admin/disconnect/<device_id>', methods=['POST'])
+@app.route('/admin/disconnect/<path:ip>', methods=['POST'])
 @localhost_only
-def disconnect_device(device_id):
+def disconnect_device(ip):
+
     with devices_lock:
-        if device_id in connected_devices:
-            connected_devices[device_id]['connected'] = False
+        if ip in connected_devices:
+            connected_devices[ip]['connected'] = False
 
     return jsonify({"success": True})
+
+@app.route('/admin/soft-block/<path:ip>', methods=['POST'])
+@localhost_only
+def soft_block(ip):
+
+    with devices_lock:
+        if ip in connected_devices:
+            connected_devices[ip]["soft_blocked"] = True
+
+    return jsonify({"success": True})
+
+@app.route('/admin/unsoft-block/<path:ip>', methods=['POST'])
+@localhost_only
+def unsoft_block(ip):
+
+    with devices_lock:
+        if ip in connected_devices:
+            connected_devices[ip]["soft_blocked"] = False
+
+    return jsonify({"success": True})
+
+def is_soft_blocked(ip):
+
+    with devices_lock:
+        device = connected_devices.get(ip)
+
+        if not device:
+            return False
+
+        return device.get("soft_blocked", False)
 
 def register_client():
     ip = request.remote_addr
@@ -232,6 +274,13 @@ def run_exploit_framework_attack(attack_name, server_type, ip_addr, port, endpoi
 
 @app.route('/run-attack', methods=['POST'])
 def run_attack():
+    ip = request.remote_addr
+
+    if is_soft_blocked(ip):
+        return jsonify({
+            "success": False,
+            "message": "Client is soft blocked."
+        }), 403
     data = request.json or {}
     attack_name = data.get('attack')
     if attack_name == 'brute_force':
