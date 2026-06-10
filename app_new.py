@@ -51,7 +51,7 @@ def init_db():
         # more defensible against sql attacks
         # cursor.execute('INSERT INTO users (username, password) VALUES (?, ?)', (default_user, default_pass))
 
-        #example victim: password' OR '1'='1
+        #example victim: ' OR '1'='1
         cursor.execute(f"INSERT INTO users (username, password) VALUES ('{default_user}', '{default_pass}')")
 
         
@@ -195,9 +195,13 @@ def login():
     
     conn = sqlite3.connect(DB_PATH)
     # DANGER: f-string allows injection in both username AND password
-    query = f"SELECT * FROM users WHERE username='{username}' AND password='{password}'"
-    
+    # comment out these two to make secure
+    query = f"SELECT * FROM users WHERE username='{username}' AND password='{password}'" 
     user = conn.execute(query).fetchone()
+
+    #comment in this to make secure
+    # user = conn.execute( "SELECT * FROM users WHERE username=? AND password=?", (username, password) ).fetchone()
+
     conn.close()
 
     # DANGER: Just checking if 'user' exists. 
