@@ -283,21 +283,75 @@
             opcuaTargetStatusLabel.innerText = opcuaStatus.reachable ? 'Reachable' : `Unreachable: ${opcuaStatus.message}`;
             opcuaTargetStatusLabel.style.color = opcuaStatus.reachable ? '#86efac' : '#fca5a5';
         }
+        async function updateSettings() {
+            try {
+                await fetch('/update-settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        brute_force_ip: bruteForceTargetIpInput.value,
+                        brute_force_port: bruteForceTargetPortInput.value,
+                        brute_force_path: bruteForceTargetPathInput.value,
 
+                        opcua_ip: targetIpInput.value,
+                        opcua_port: targetPortInput.value,
+                        endpoint: endpointInput.value,
+                        server_type: serverTypeInput.value
+                    })
+                });
+            } catch (err) {
+                console.error('Settings update failed:', err);
+            }
+        }
         bruteForceTargetIpInput.addEventListener('change', updateTargetStatus);
+        bruteForceTargetIpInput.addEventListener('input', updateSettings);
         bruteForceTargetPortInput.addEventListener('change', updateTargetStatus);
+        bruteForceTargetPortInput.addEventListener('input', updateSettings);
+
         const bruteForceTargetPathInput = document.getElementById('bruteForceTargetPath');
         bruteForceTargetPathInput.addEventListener('change', updateTargetStatus);
+        bruteForceTargetPathInput.addEventListener('input', updateSettings);
+
         targetIpInput.addEventListener('change', updateTargetStatus);
+        targetIpInput.addEventListener('input', updateSettings);
         targetPortInput.addEventListener('change', updateTargetStatus);
+        targetPortInput.addEventListener('input', updateSettings);
+
         endpointInput.addEventListener('change', updateTargetStatus);
+        endpointInput.addEventListener('input', updateSettings);
         serverTypeInput.addEventListener('change', updateTargetStatus);
+        serverTypeInput.addEventListener('input', updateSettings);
+
         updateTargetStatus();
 
         async function updateAttackStatus() {
             try {
                 const res = await fetch('/attack-status');
                 const data = await res.json();
+                        // Sync target settings
+                if (data.brute_force_ip)
+                    bruteForceTargetIpInput.value = data.brute_force_ip;
+
+                if (data.brute_force_port)
+                    bruteForceTargetPortInput.value = data.brute_force_port;
+
+                if (data.brute_force_path)
+                    bruteForceTargetPathInput.value = data.brute_force_path;
+
+                if (data.opcua_ip)
+                    targetIpInput.value = data.opcua_ip;
+
+                if (data.opcua_port)
+                    targetPortInput.value = data.opcua_port;
+
+                if (data.endpoint)
+                    endpointInput.value = data.endpoint;
+
+                if (data.server_type)
+                    serverTypeInput.value = data.server_type;
+                updateTargetStatus();
                 setStatus(data.message || 'No attack status');
                 attackResultLabel.innerText = data.found_password || 'None';
                 if (data.found_password) {
@@ -383,53 +437,6 @@
                 setStatus('Stop request failed: ' + err.message);
             }
         });
-    </script>
-    <script>
-        async function updateAttackStatus() {
-            try {
-                const response = await fetch("/attack-status");
-                const data = await response.json();
-
-                // Status
-                const statusEl = document.getElementById("attack-status");
-                if (statusEl) {
-                    statusEl.textContent = data.status || "";
-                }
-
-                // Current attack
-                const attackEl = document.getElementById("current-attack");
-                if (attackEl) {
-                    attackEl.textContent = data.current_attack || "None";
-                }
-
-                // Message
-                const messageEl = document.getElementById("attack-message");
-                if (messageEl) {
-                    messageEl.textContent = data.message || "";
-                }
-
-                // Password
-                const passwordEl = document.getElementById("found-password");
-                if (passwordEl) {
-                    passwordEl.textContent = data.found_password || "";
-                }
-
-                // Logs
-                const logsEl = document.getElementById("attack-logs");
-                if (logsEl) {
-                    logsEl.textContent = (data.logs || []).join("\n");
-                }
-
-            } catch (err) {
-                console.error("Status update failed:", err);
-            }
-        }
-
-        // Run immediately
-        updateAttackStatus();
-
-        // Refresh every second
-        setInterval(updateAttackStatus, 1000);
     </script>
 </body>
 </html>

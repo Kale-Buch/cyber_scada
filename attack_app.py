@@ -20,8 +20,17 @@ attack_state = {
     'current_attack': None,
     'message': 'No attack started.',
     'found_password': None,
-    'attempts': [],  # recent passwords tried by brute force
-    'logs': []       # recent lines from exploit framework
+    'attempts': [],
+    'logs': [],
+
+    'opcua_ip': '',
+    'opcua_port': 4840,
+    'endpoint': '/freeopcua/server/',
+    'server_type': 'prosys',
+
+    'brute_force_ip': '',
+    'brute_force_port': 5005,
+    'brute_force_path': '/login'
 }
 
 
@@ -271,6 +280,23 @@ def run_exploit_framework_attack(attack_name, server_type, ip_addr, port, endpoi
 # ----------------------------
 # Routes
 # ----------------------------
+@app.route('/update-settings', methods=['POST'])
+def update_settings():
+    data = request.json
+
+    print("UPDATE SETTINGS:", data)
+
+    attack_state['brute_force_ip'] = data.get('brute_force_ip')
+    attack_state['brute_force_port'] = data.get('brute_force_port')
+    attack_state['brute_force_path'] = data.get('brute_force_path')
+
+    attack_state['opcua_ip'] = data.get('opcua_ip')
+    attack_state['opcua_port'] = data.get('opcua_port')
+    attack_state['endpoint'] = data.get('endpoint')
+    attack_state['server_type'] = data.get('server_type')
+
+    return jsonify(success=True)
+
 
 @app.route('/run-attack', methods=['POST'])
 def run_attack():
@@ -283,6 +309,14 @@ def run_attack():
         }), 403
     data = request.json or {}
     attack_name = data.get('attack')
+    attack_state['brute_force_ip'] = data.get('brute_force_ip')
+    attack_state['brute_force_port'] = data.get('brute_force_port')
+    attack_state['brute_force_path'] = data.get('brute_force_path')
+
+    attack_state['opcua_ip'] = data.get('opcua_ip')
+    attack_state['opcua_port'] = data.get('opcua_port')
+    attack_state['endpoint'] = data.get('endpoint')
+    attack_state['server_type'] = data.get('server_type')
     if attack_name == 'brute_force':
         ip_addr = data.get('brute_force_ip', '127.0.0.1')
         port = int(data.get('brute_force_port', 5005) or 5005)
@@ -305,7 +339,12 @@ def run_attack():
             'status': 'running',
             'current_attack': 'brute_force',
             'message': 'Running brute force...',
-            'found_password': None
+            'found_password': None,
+
+            # sync settings to all dashboards
+            'brute_force_ip': original_ip,
+            'brute_force_port': port,
+            'brute_force_path': sys.path
         })
         threading.Thread(target=run_bruteforce_attack, args=(ip_addr, port, path), daemon=True).start()
         message = 'Brute force attack started in background.'
@@ -320,7 +359,13 @@ def run_attack():
             'status': 'running',
             'current_attack': attack_name,
             'message': f'{attack_name.replace("_", " ").title()} attack started.',
-            'found_password': None
+            'found_password': None,
+
+            # sync settings to all dashboards
+            'opcua_ip': ip_addr,
+            'opcua_port': port,
+            'endpoint': endpoint,
+            'server_type': server_type
         })
         threading.Thread(target=run_exploit_framework_attack, args=(attack_name, server_type, ip_addr, port, endpoint), daemon=True).start()
         message = f'{attack_name.replace("_", " ").title()} attack started in background.'
