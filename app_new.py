@@ -8,8 +8,16 @@ import os
 import socket
 import threading
 import time
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 app = Flask(__name__)
+
+limiter = Limiter(
+    key_func=get_remote_address,
+    app=app,
+    default_limits=["200 per day", "50 per hour"]
+)
 
 OPC_URL = "opc.tcp://scadadash.local:4840/freeopcua/server/"
 # OPC_URL = "opc.tcp://10.175.227.209:4840/freeopcua/server/"
@@ -188,6 +196,7 @@ def restrict_dashboard_access():
     return None
 
 @app.route('/login', methods=['POST'])
+@limiter.limit("3 per minute")
 def login():
     data = request.json
     username = data.get('username')

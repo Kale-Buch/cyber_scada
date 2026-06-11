@@ -384,5 +384,52 @@
             }
         });
     </script>
+    <script>
+        async function updateAttackStatus() {
+            try {
+                const response = await fetch("/attack-status");
+                const data = await response.json();
+
+                // Status
+                const statusEl = document.getElementById("attack-status");
+                if (statusEl) {
+                    statusEl.textContent = data.status || "";
+                }
+
+                // Current attack
+                const attackEl = document.getElementById("current-attack");
+                if (attackEl) {
+                    attackEl.textContent = data.current_attack || "None";
+                }
+
+                // Message
+                const messageEl = document.getElementById("attack-message");
+                if (messageEl) {
+                    messageEl.textContent = data.message || "";
+                }
+
+                // Password
+                const passwordEl = document.getElementById("found-password");
+                if (passwordEl) {
+                    passwordEl.textContent = data.found_password || "";
+                }
+
+                // Logs
+                const logsEl = document.getElementById("attack-logs");
+                if (logsEl) {
+                    logsEl.textContent = (data.logs || []).join("\n");
+                }
+
+            } catch (err) {
+                console.error("Status update failed:", err);
+            }
+        }
+
+        // Run immediately
+        updateAttackStatus();
+
+        // Refresh every second
+        setInterval(updateAttackStatus, 1000);
+    </script>
 </body>
 </html>
