@@ -282,6 +282,12 @@ def run_exploit_framework_attack(attack_name, server_type, ip_addr, port, endpoi
 # ----------------------------
 @app.route('/update-settings', methods=['POST'])
 def update_settings():
+    ip = request.remote_addr
+    if is_soft_blocked(ip):
+        return jsonify({
+            "success": False,
+            "message": "Client is soft blocked."
+        }), 403
     data = request.json
 
     print("UPDATE SETTINGS:", data)
@@ -348,7 +354,7 @@ def run_attack():
         })
         threading.Thread(target=run_bruteforce_attack, args=(ip_addr, port, path), daemon=True).start()
         message = 'Brute force attack started in background.'
-    elif attack_name in ('thread_pool_wait_starvation', 'unlimited_condition_refresh'):
+    elif attack_name in ('certificate_inf_chain_loop', 'chunk_flood', 'close_session_with_old_timestamp', 'complex_nested_message', 'function_call_null_deref', 'malformed_uf8', 'open_multiple_secure_channels', 'race_change_and_browse_address_space', 'thread_pool_wait_starvation', 'translate_browse_path_call_stack_overflow', 'unlimited_condition_refresh', 'unlimited_persistent_subscriptions'):
         server_type = data.get('server_type', 'prosys')
         ip_addr = data.get('opcua_ip', '127.0.0.1')
         port = int(data.get('opcua_port', 4840) or 4840)

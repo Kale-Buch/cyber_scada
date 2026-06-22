@@ -205,8 +205,34 @@
                 </div>
                 <p class="note">Other attacks use the configured OPC UA endpoint and server type.</p>
                 <div style="display:flex;gap:0.6rem;margin-top:1rem;flex-wrap:wrap">
-                    <button class="btn attack-btn" id="threadPoolBtn">Run Starvation</button>
-                    <button class="btn attack-btn" id="conditionRefreshBtn">Run ConditionRefresh</button>
+                    <select id="opcuaAttackSelect" style="flex:1">
+                        <option value="">Select OPC UA Attack</option>
+
+                        <optgroup label="Resource Exhaustion">
+                            <option value="thread_pool_wait_starvation">Thread Pool Wait Starvation</option>
+                            <option value="chunk_flood">Chunk Flood</option>
+                            <option value="unlimited_condition_refresh">Unlimited Condition Refresh</option>
+                            <option value="unlimited_persistent_subscriptions">Unlimited Persistent Subscriptions</option>
+                            <option value="open_multiple_secure_channels">Open Multiple Secure Channels</option>
+                        </optgroup>
+
+                        <optgroup label="Malformed Messages">
+                            <option value="malformed_uf8">Malformed UTF-8</option>
+                            <option value="complex_nested_message">Complex Nested Message</option>
+                            <option value="function_call_null_deref">Function Call Null Dereference</option>
+                            <option value="close_session_with_old_timestamp">Close Session With Old Timestamp</option>
+                        </optgroup>
+
+                        <optgroup label="Logic / State Attacks">
+                            <option value="race_change_and_browse_address_space">Race Change & Browse Address Space</option>
+                            <option value="certificate_inf_chain_loop">Certificate Infinite Chain Loop</option>
+                            <option value="translate_browse_path_call_stack_overflow">Translate Browse Path Stack Overflow</option>
+                        </optgroup>
+                    </select>
+
+                    <button class="btn attack-btn" id="runOpcuaAttackBtn">
+                        Run OPC UA Attack
+                    </button>
                 </div>
             </div>
         </div>
@@ -239,8 +265,8 @@
     <script>
         const stopAttackBtn = document.getElementById('stopAttackBtn');
         const bruteForceBtn = document.getElementById('bruteForceBtn');
-        const threadPoolBtn = document.getElementById('threadPoolBtn');
-        const conditionRefreshBtn = document.getElementById('conditionRefreshBtn');
+        const runOpcuaAttackBtn = document.getElementById('runOpcuaAttackBtn');
+        const opcuaAttackSelect = document.getElementById('opcuaAttackSelect');
         const statusBox = document.getElementById('statusBox');
         const attackResultLabel = document.getElementById('attackResult');
         const bruteForceTargetStatusLabel = document.getElementById('bruteForceTargetStatus');
@@ -425,8 +451,16 @@
         }
 
         bruteForceBtn.addEventListener('click', () => startAttack('brute_force'));
-        threadPoolBtn.addEventListener('click', () => startAttack('thread_pool_wait_starvation'));
-        conditionRefreshBtn.addEventListener('click', () => startAttack('unlimited_condition_refresh'));
+        runOpcuaAttackBtn.addEventListener('click', () => {
+            const selectedAttack = opcuaAttackSelect.value;
+
+            if (!selectedAttack) {
+                setStatus('Please select an OPC UA attack.');
+                return;
+            }
+
+            startAttack(selectedAttack);
+        });
         stopAttackBtn.addEventListener('click', async () => {
             setStatus('Stopping running attack...');
             try {
